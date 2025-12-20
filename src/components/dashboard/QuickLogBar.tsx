@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks'
 import type { AppState as DomainState, Entry } from '../../shared/storage/state'
 import type { AppEvent } from '../../state/events'
 import { uid } from '../../shared/storage/state'
+import { validateMinutes, validateMoneyWon } from '../../shared/utils/validation'
 
 type Props = {
   domain: DomainState
@@ -42,6 +43,7 @@ export function QuickLogBar({ domain, dispatch, personId, setPersonId, onSaved, 
   const [reciprocity, setReciprocity] = useState<1 | 2 | 3 | 4 | 5>(3)
   const [boundaryHit, setBoundaryHit] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
 
   // Calculate time cost in Won
   const timeCostWon = useMemo(() => Math.round((minutes / 60) * hourlyRate), [minutes, hourlyRate])
@@ -49,8 +51,27 @@ export function QuickLogBar({ domain, dispatch, personId, setPersonId, onSaved, 
   const canSave = hasPeople && !!personId
 
   const save = () => {
+    setError('')
     if (!canSave) return
-    if (!people.some(p => p.id === personId)) return
+    if (!people.some(p => p.id === personId)) {
+      setError('선택한 사람이 존재하지 않습니다')
+      return
+    }
+
+    // Validate minutes
+    const minutesVal = validateMinutes(Number(minutes) || 0)
+    if (!minutesVal.valid) {
+      setError(minutesVal.error || '시간 입력 오류')
+      return
+    }
+
+    // Validate money
+    const moneyVal = validateMoneyWon(Number(moneyWon) || 0)
+    if (!moneyVal.valid) {
+      setError(moneyVal.error || '금액 입력 오류')
+      return
+    }
+
     const entry: Entry = {
       id: uid('e'),
       personId,
@@ -78,9 +99,16 @@ export function QuickLogBar({ domain, dispatch, personId, setPersonId, onSaved, 
         </div>
         <div class="row">
           {saved && <div class="badge" style={{ borderColor: 'rgba(52,211,153,0.35)', color: 'var(--ok)' }}>저장됨</div>}
+          {error && <div class="badge" style={{ borderColor: 'rgba(239,68,68,0.35)', color: 'var(--colorStatusDangerForeground1)' }}>오류</div>}
           <button class="btn primary" onClick={save} disabled={!canSave}>저장</button>
         </div>
       </div>
+
+      {error && (
+        <div class="callout danger" style={{ marginTop: 8, padding: '8px 12px' }}>
+          {error}
+        </div>
+      )}
 
       {!hasPeople ? (
         <div class="callout danger" style={{ marginTop: 10 }}>
