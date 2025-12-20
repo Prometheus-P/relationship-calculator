@@ -14,6 +14,8 @@ import {
   validateMonth,
 } from '../../shared/utils/validation'
 
+type ViewFilter = 'all' | 'personal' | 'client'
+
 export function DashboardPage({ domain, dispatch }: { domain: DomainState, dispatch: (e: AppEvent) => void }) {
   const [newPersonName, setNewPersonName] = useState('')
   const [personNameError, setPersonNameError] = useState('')
@@ -29,6 +31,30 @@ export function DashboardPage({ domain, dispatch }: { domain: DomainState, dispa
   const [month, setMonth] = useState('') // YYYY-MM
   const [monthError, setMonthError] = useState('')
   const [quickOpen, setQuickOpen] = useState(false)
+  const [viewFilter, setViewFilter] = useState<ViewFilter>('all')
+  const [isClientNew, setIsClientNew] = useState(false)
+
+  // Filter people by view filter
+  const filteredPeople = useMemo(() => {
+    if (viewFilter === 'all') return domain.people
+    if (viewFilter === 'client') return domain.people.filter(p => p.isClient)
+    return domain.people.filter(p => !p.isClient)
+  }, [domain.people, viewFilter])
+
+  // Count for tabs
+  const clientCount = useMemo(() => domain.people.filter(p => p.isClient).length, [domain.people])
+  const personalCount = useMemo(() => domain.people.filter(p => !p.isClient).length, [domain.people])
+
+  // Total hours spent
+  const totalHours = useMemo(() => {
+    const mins = domain.entries.reduce((sum, e) => sum + e.minutes, 0)
+    return (mins / 60).toFixed(1)
+  }, [domain.entries])
+
+  // Total direct money
+  const totalDirectMoney = useMemo(() => {
+    return domain.entries.reduce((sum, e) => sum + e.moneyWon, 0)
+  }, [domain.entries])
 
   const report = useMemo(() => {
     const monthValidation = validateMonth(month)
@@ -50,9 +76,10 @@ export function DashboardPage({ domain, dispatch }: { domain: DomainState, dispa
     }
     setPersonNameError('')
     const name = newPersonName.trim()
-    const p = { id: uid('p'), name, createdAt: new Date().toISOString() }
+    const p = { id: uid('p'), name, createdAt: new Date().toISOString(), isClient: isClientNew }
     dispatch({ type: 'PERSON_ADD', person: p })
     setNewPersonName('')
+    setIsClientNew(false)
     if (!entryPersonId) setEntryPersonId(p.id)
   }
 
@@ -102,9 +129,28 @@ export function DashboardPage({ domain, dispatch }: { domain: DomainState, dispa
 
   return (
     <div class="panel">
-      <div class="row" style={{ justifyContent: 'space-between' }}>
+      {/* Hero Section - Total Loss */}
+      <div class="card" style={{ background: 'var(--colorNeutralBackground4)', border: '2px solid var(--colorStatusDangerForeground1)', marginBottom: 16 }}>
+        <div class="hint" style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>현재까지 총 손실</div>
+        <div style={{ fontSize: 'var(--fontSizeHero900)', fontWeight: 700, color: 'var(--colorStatusDangerForeground1)', lineHeight: 1.1, marginTop: 4 }}>
+          -₩{report.totals.netLossWon.toLocaleString()}
+        </div>
+        <div class="hint" style={{ marginTop: 8 }}>
+          시간 {totalHours}h · 직접 비용 ₩{totalDirectMoney.toLocaleString()} · ROI {report.totals.roiPct}%
+        </div>
+        {report.topCauseLabel && (
+          <div style={{ marginTop: 8 }}>
+            <span class="pillMini danger">손해 1위</span>
+            <span style={{ marginLeft: 8, fontWeight: 700 }}>{report.topPersonLabel}</span>
+            <span class="muted" style={{ marginLeft: 8 }}>원인: {report.topCauseLabel}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Header with B2B Tabs */}
+      <div class="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div class="h1">대시보드</div>
+          <div class="h1">관계 감사 리포트</div>
           <div class="hint">사람/상황을 기록하면, 손익과 원인이 자동으로 뽑힌다.</div>
         </div>
         <div>
@@ -114,6 +160,19 @@ export function DashboardPage({ domain, dispatch }: { domain: DomainState, dispa
           </div>
           {monthError && <div class="hint danger" style={{ marginTop: 4 }}>{monthError}</div>}
         </div>
+      </div>
+
+      {/* B2B Filter Tabs */}
+      <div class="tabs" style={{ marginTop: 12 }}>
+        <button class={`tab ${viewFilter === 'all' ? 'active' : ''}`} onClick={() => setViewFilter('all')}>
+          전체 ({domain.people.length})
+        </button>
+        <button class={`tab ${viewFilter === 'personal' ? 'active' : ''}`} onClick={() => setViewFilter('personal')}>
+          관계 ({personalCount})
+        </button>
+        <button class={`tab ${viewFilter === 'client' ? 'active' : ''}`} onClick={() => setViewFilter('client')}>
+          클라이언트 ({clientCount})
+        </button>
       </div>
 
       <QuickLogBar
@@ -127,24 +186,35 @@ export function DashboardPage({ domain, dispatch }: { domain: DomainState, dispa
 
       <div class="grid cols-2" style={{ marginTop: 14 }}>
         <div class="card">
-          <div class="h2">사람 추가</div>
+          <div class="h2">대상 추가</div>
           <div class="row" style={{ marginTop: 10 }}>
             <input class="input" placeholder="이름/호칭 (공유 시 익명화 가능)" value={newPersonName} onInput={(e) => { setNewPersonName((e.currentTarget as HTMLInputElement).value); setPersonNameError(''); }} />
             <button class="btn primary" onClick={addPerson}>추가</button>
           </div>
+          <div class="row" style={{ marginTop: 8 }}>
+            <label class="row" style={{ gap: 8 }}>
+              <input type="checkbox" checked={isClientNew} onChange={(e) => setIsClientNew((e.currentTarget as HTMLInputElement).checked)} />
+              <span style={{ fontWeight: 600 }}>클라이언트 (업무)</span>
+            </label>
+          </div>
           {personNameError && <div class="hint danger" style={{ marginTop: 6 }}>{personNameError}</div>}
           <div class="hint" style={{ marginTop: 10 }}>
-            팁: 공유용 카드에는 기본으로 A/B/C로 바꿀 수 있음.
+            팁: 클라이언트 체크하면 B2B 탭에서 따로 관리 가능.
           </div>
 
-          <div class="h2" style={{ marginTop: 18 }}>사람 목록</div>
+          <div class="h2" style={{ marginTop: 18 }}>
+            {viewFilter === 'client' ? '클라이언트 목록' : viewFilter === 'personal' ? '관계 목록' : '전체 목록'}
+          </div>
           <div class="list" style={{ marginTop: 10 }}>
-            {domain.people.length === 0 && <div class="hint">비어있음. 사람 1명 추가하고 ‘오늘 10초 기록’부터.</div>}
-            {domain.people.map(p => (
+            {filteredPeople.length === 0 && <div class="hint">비어있음. 사람 1명 추가하고 '오늘 10초 기록'부터.</div>}
+            {filteredPeople.map(p => (
               <div class="listItem">
                 <div>
-                  <div style={{ fontWeight: 800 }}>{p.name}</div>
-                  <div class="hint">entry: {domain.entries.filter(e => e.personId === p.id).length}</div>
+                  <div style={{ fontWeight: 800 }}>
+                    {p.name}
+                    {p.isClient && <span class="pillMini" style={{ marginLeft: 6 }}>업무</span>}
+                  </div>
+                  <div class="hint">기록: {domain.entries.filter(e => e.personId === p.id).length}개</div>
                 </div>
                 <div class="row">
                   <button class="btn" onClick={() => setEntryPersonId(p.id)}>선택</button>

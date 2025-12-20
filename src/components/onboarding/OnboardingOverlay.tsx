@@ -24,9 +24,18 @@ export function completeOnboarding(dispatch: (e: AppEvent) => void) {
   dispatch({ type: 'SETTINGS_PATCH', patch: { onboardingCompleted: true, onboardingVersion: ONBOARDING_VERSION } })
 }
 
+const HOURLY_PRESETS = [
+  { label: '최저시급', value: 9860, desc: '2024년 기준' },
+  { label: '직장인 평균', value: 25000, desc: '연봉 5천만 환산' },
+  { label: '프리랜서', value: 50000, desc: '전문직 단가' },
+  { label: '고급 전문가', value: 100000, desc: '컨설턴트/변호사급' },
+]
+
 export function OnboardingOverlay({ domain, dispatch }: { domain: DomainState; dispatch: (e: AppEvent) => void }) {
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
+  const [hourlyRate, setHourlyRate] = useState(domain.settings.timeValuePerHourWon)
+  const [customRate, setCustomRate] = useState('')
   const people = domain.people
   const entries = domain.entries
 
@@ -34,10 +43,12 @@ export function OnboardingOverlay({ domain, dispatch }: { domain: DomainState; d
     try { return buildReport(domain) } catch { return null }
   }, [domain])
 
+  // 5-step flow: 0=intro, 1=hourlyRate, 2=people, 3=entries, 4=preview
   const canGoStep1 = step === 0
-  const canGoStep2 = step >= 1 && people.length >= 2
-  const canGoStep3 = step >= 2 && (entries.length >= 2 || entries.some(e => e.note?.includes('[demo]')))
-  const canFinish = step >= 3
+  const canGoStep2 = step >= 1 && hourlyRate > 0
+  const canGoStep3 = step >= 2 && people.length >= 2
+  const canGoStep4 = step >= 3 && (entries.length >= 2 || entries.some(e => e.note?.includes('[demo]')))
+  const canFinish = step >= 4
 
   const addPerson = (raw: string) => {
     const n = raw.trim()
@@ -109,7 +120,7 @@ export function OnboardingOverlay({ domain, dispatch }: { domain: DomainState; d
 
   const StepDots = () => (
     <div class="obDots">
-      {[0,1,2,3].map(i => (
+      {[0,1,2,3,4].map(i => (
         <div class={`obDot ${i<=step ? 'on' : ''}`}></div>
       ))}
     </div>
@@ -119,11 +130,16 @@ export function OnboardingOverlay({ domain, dispatch }: { domain: DomainState; d
     completeOnboarding(dispatch)
   }
 
+  const saveHourlyRate = () => {
+    dispatch({ type: 'SETTINGS_PATCH', patch: { timeValuePerHourWon: hourlyRate } })
+  }
+
   const next = () => {
     if (step === 0) setStep(1)
-    else if (step === 1 && people.length >= 2) setStep(2)
-    else if (step === 2 && (entries.length >= 2 || entries.some(e => (e.note||'').includes('[demo]')))) setStep(3)
-    else if (step >= 3) completeOnboarding(dispatch)
+    else if (step === 1 && hourlyRate > 0) { saveHourlyRate(); setStep(2) }
+    else if (step === 2 && people.length >= 2) setStep(3)
+    else if (step === 3 && (entries.length >= 2 || entries.some(e => (e.note||'').includes('[demo]')))) setStep(4)
+    else if (step >= 4) completeOnboarding(dispatch)
   }
 
   return (
@@ -137,10 +153,10 @@ export function OnboardingOverlay({ domain, dispatch }: { domain: DomainState; d
           <button class="btn" onClick={skip}>건너뛰기</button>
         </div>
 
-        {/* STEP 0 */}
+        {/* STEP 0: Intro */}
         {step === 0 && (
           <div style={{ marginTop: 14 }}>
-            {header('감정 빼고, 손익만 정리한다.', '딱 1분만. 사람 2명 + 기록 2개 만들면 “공유 카드”까지 바로 나온다.')}
+            {header('감정 빼고, 손익만 정리한다.', '딱 1분만. 사람 2명 + 기록 2개 만들면 "공유 카드"까지 바로 나온다.')}
             <div class="card" style={{ marginTop: 14 }}>
               <div class="h2">규칙</div>
               <ul class="obList">
@@ -156,8 +172,78 @@ export function OnboardingOverlay({ domain, dispatch }: { domain: DomainState; d
           </div>
         )}
 
-        {/* STEP 1 */}
+        {/* STEP 1: Hourly Rate */}
         {step === 1 && (
+          <div style={{ marginTop: 14 }}>
+            {header('당신의 1시간은 얼마입니까?', '시간도 돈이다. 이 숫자로 모든 관계 비용을 계산한다.')}
+            <div class="grid cols-2" style={{ marginTop: 14 }}>
+              <div class="card">
+                <div class="h2">시급 선택</div>
+                <div class="hint">기준을 정해야 손해가 "숫자"로 보인다.</div>
+                <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+                  {HOURLY_PRESETS.map(p => (
+                    <button
+                      class={`btn ${hourlyRate === p.value ? 'primary' : ''}`}
+                      style={{ justifyContent: 'space-between', width: '100%' }}
+                      onClick={() => { setHourlyRate(p.value); setCustomRate('') }}
+                    >
+                      <span>{p.label}</span>
+                      <span class="muted">₩{p.value.toLocaleString()}/h</span>
+                    </button>
+                  ))}
+                </div>
+                <div class="row" style={{ marginTop: 12, gap: 8 }}>
+                  <input
+                    class="input"
+                    type="number"
+                    placeholder="직접 입력 (원/시간)"
+                    value={customRate}
+                    onInput={(e) => {
+                      const v = (e.currentTarget as HTMLInputElement).value
+                      setCustomRate(v)
+                      const n = parseInt(v, 10)
+                      if (!isNaN(n) && n > 0) setHourlyRate(n)
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="h2">예시 계산</div>
+                <div class="hint">30분 통화 = 얼마?</div>
+                <div class="obPreview" style={{ marginTop: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>30분 × ₩{hourlyRate.toLocaleString()}/h</span>
+                    <span class="big danger">-₩{Math.round((30/60) * hourlyRate).toLocaleString()}</span>
+                  </div>
+                  <div class="hr"></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>1시간 × ₩{hourlyRate.toLocaleString()}/h</span>
+                    <span class="big danger">-₩{hourlyRate.toLocaleString()}</span>
+                  </div>
+                  <div class="hr"></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>2시간 × ₩{hourlyRate.toLocaleString()}/h</span>
+                    <span class="big danger">-₩{(hourlyRate * 2).toLocaleString()}</span>
+                  </div>
+                </div>
+                <div class="hint" style={{ marginTop: 10 }}>
+                  감정 노동도 노동이다. 내 시간에 가격을 매기면, 호구짓이 보인다.
+                </div>
+              </div>
+            </div>
+
+            <div class="row" style={{ justifyContent: 'space-between', marginTop: 14 }}>
+              <button class="btn" onClick={() => setStep(0)}>이전</button>
+              <button class={`btn primary ${hourlyRate > 0 ? '' : 'disabled'}`} disabled={hourlyRate <= 0} onClick={next}>
+                다음 (₩{hourlyRate.toLocaleString()}/h 확정)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2: People */}
+        {step === 2 && (
           <div style={{ marginTop: 14 }}>
             {header('Step 1. 사람 2명만 등록해.', '실명 넣지 마. 닉네임/이니셜이면 충분하다.')}
             <div class="grid cols-2" style={{ marginTop: 14 }}>
@@ -197,7 +283,7 @@ export function OnboardingOverlay({ domain, dispatch }: { domain: DomainState; d
             </div>
 
             <div class="row" style={{ justifyContent: 'space-between', marginTop: 14 }}>
-              <button class="btn" onClick={() => setStep(0)}>이전</button>
+              <button class="btn" onClick={() => setStep(1)}>이전</button>
               <button class={`btn primary ${people.length>=2 ? '' : 'disabled'}`} disabled={people.length < 2} onClick={next}>
                 다음
               </button>
@@ -205,8 +291,8 @@ export function OnboardingOverlay({ domain, dispatch }: { domain: DomainState; d
           </div>
         )}
 
-        {/* STEP 2 */}
-        {step === 2 && (
+        {/* STEP 3: Entries */}
+        {step === 3 && (
           <div style={{ marginTop: 14 }}>
             {header('Step 2. 기록 2개만 찍고 끝.', '직접 쓰기 귀찮으면 샘플을 넣어준다. 핵심은 “숫자로 체감”하는 것.')}
             <div class="grid cols-2" style={{ marginTop: 14 }}>
@@ -241,7 +327,7 @@ export function OnboardingOverlay({ domain, dispatch }: { domain: DomainState; d
             </div>
 
             <div class="row" style={{ justifyContent: 'space-between', marginTop: 14 }}>
-              <button class="btn" onClick={() => setStep(1)}>이전</button>
+              <button class="btn" onClick={() => setStep(2)}>이전</button>
               <button class={`btn primary ${(entries.length>=2 || entries.some(e => (e.note||'').includes('[demo]'))) ? '' : 'disabled'}`}
                 disabled={!(entries.length>=2 || entries.some(e => (e.note||'').includes('[demo]')))} onClick={next}>
                 다음
@@ -250,8 +336,8 @@ export function OnboardingOverlay({ domain, dispatch }: { domain: DomainState; d
           </div>
         )}
 
-        {/* STEP 3 */}
-        {step === 3 && (
+        {/* STEP 4: Preview */}
+        {step === 4 && (
           <div style={{ marginTop: 14 }}>
             {header('Step 3. 이게 바이럴 포인트다.', '공유 카드로 “정리된 복수”를 한다. 말로 싸우지 말고 숫자로 조져.')}
             <div class="grid cols-2" style={{ marginTop: 14 }}>
@@ -297,7 +383,7 @@ export function OnboardingOverlay({ domain, dispatch }: { domain: DomainState; d
             </div>
 
             <div class="row" style={{ justifyContent: 'space-between', marginTop: 14 }}>
-              <button class="btn" onClick={() => setStep(2)}>이전</button>
+              <button class="btn" onClick={() => setStep(3)}>이전</button>
               <button class="btn primary" onClick={() => { completeOnboarding(dispatch); dispatch({ type: 'SET_TAB', tab: 'dashboard' }) }}>
                 끝내기
               </button>

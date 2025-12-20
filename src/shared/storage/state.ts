@@ -1,9 +1,15 @@
 export type Plan = 'free' | 'paid'
 
+export type PersonCategory = 'personal' | 'work' | 'family'
+
 export type Person = {
   id: string
   name: string
   createdAt: string
+  /** B2B: 클라이언트/업무 관계 여부 */
+  isClient?: boolean
+  /** 관계 분류 */
+  category?: PersonCategory
 }
 
 export type Entry = {

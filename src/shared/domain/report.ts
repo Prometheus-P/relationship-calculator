@@ -84,11 +84,11 @@ function pickTopCause(a: Omit<PersonAggregate, 'topCause' | 'topCauseLabel'>): C
 
 export function causeLabel(k: CauseKey): string {
   switch (k) {
-    case 'BOUNDARY': return '경계침해'
-    case 'TIME': return '시간 과다'
-    case 'MONEY': return '돈 새는 구멍'
-    case 'MOOD': return '멘탈 하락'
-    case 'RECIPROCITY': return '상호성 부족'
+    case 'BOUNDARY': return '추가 비용 발생'
+    case 'TIME': return '인건비 초과'
+    case 'MONEY': return '직접 지출'
+    case 'MOOD': return '감정세 부과'
+    case 'RECIPROCITY': return '투자 효율 저하'
   }
 }
 
