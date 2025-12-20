@@ -37,7 +37,7 @@ export function WeeklySummaryCard({ domain }: { domain: DomainState }) {
   const hasData = week.totals.entries > 0
 
   return (
-    <div class="card" style={{ marginTop: 14 }}>
+    <div class="card">
       <div class="row" style={{ justifyContent: 'space-between' }}>
         <div>
           <div class="h2">주간 요약</div>

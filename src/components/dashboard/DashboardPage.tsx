@@ -8,6 +8,7 @@ import { QuickLogBar } from './QuickLogBar'
 import { QuickLogSheet } from './QuickLogSheet'
 import { QuickLogFab } from './QuickLogFab'
 import { WeeklySummaryCard } from './WeeklySummaryCard'
+import { ReceiptCard } from './ReceiptCard'
 import {
   validatePersonName,
   validateEntry,
@@ -182,7 +183,11 @@ export function DashboardPage({ domain, dispatch }: { domain: DomainState, dispa
         setPersonId={setEntryPersonId}
       />
 
-      <WeeklySummaryCard domain={domain} />
+      {/* 주간 요약 + 영수증 카드 */}
+      <div class="grid cols-2" style={{ marginTop: 14 }}>
+        <WeeklySummaryCard domain={domain} />
+        <ReceiptCard domain={domain} />
+      </div>
 
       <div class="grid cols-2" style={{ marginTop: 14 }}>
         <div class="card">
