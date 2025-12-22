@@ -25,6 +25,8 @@ export type AppEvent =
   | { type: 'COACH_RUN_OK'; data: CoachResult }
   | { type: 'COACH_RUN_FAIL'; error: string }
   | { type: 'COACH_NEED_PRO'; need: boolean }
+  | { type: 'COACH_RATE_LIMIT_ADD' }
+  | { type: 'COACH_RATE_LIMIT_RESET' }
 
   // pro ui
   | { type: 'PRO_CODE'; code: string }
@@ -34,6 +36,7 @@ export type AppEvent =
 
   // payment
   | { type: 'PAYMENT_START' }
+  | { type: 'PAYMENT_VERIFYING' }
   | { type: 'PAYMENT_OK'; token: string; expiresAt: string }
   | { type: 'PAYMENT_FAIL'; error: string }
   | { type: 'PAYMENT_RESET' }

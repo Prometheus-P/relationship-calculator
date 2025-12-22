@@ -932,6 +932,10 @@ a:hover { color: var(--colorBrandForeground2); }
   animation: rr-pop var(--durationFast) var(--curveDecelerateMax);
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ========================================
    Footer
    ======================================== */
@@ -984,13 +988,38 @@ a:hover { color: var(--colorBrandForeground2); }
 
   .qBtn {
     flex: 1 1 auto;
-    min-width: 48px;
+    min-width: 44px;
+    min-height: 36px;
+    padding: var(--spacingXS) var(--spacingSNudge);
+    font-size: var(--fontSizeBase200);
     text-align: center;
   }
 
   .qInput {
     width: 100%;
-    max-width: 120px;
+    max-width: 100px;
+    min-height: 36px;
+  }
+
+  .qLabel {
+    font-size: var(--fontSizeBase100);
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 380px) {
+  .qBtn {
+    min-width: 38px;
+    padding: var(--spacingXXS) var(--spacingXS);
+    font-size: var(--fontSizeBase100);
+  }
+
+  .qInput {
+    max-width: 80px;
+  }
+
+  .quickbar {
+    padding: var(--spacingS);
   }
 }
 

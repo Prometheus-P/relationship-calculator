@@ -98,6 +98,17 @@ case 'PERSON_ADD': {
     case 'COACH_NEED_PRO':
       return { ...s, coachUi: { ...s.coachUi, needPro: e.need } }
 
+    case 'COACH_RATE_LIMIT_ADD': {
+      const now = Date.now()
+      const oneMinuteAgo = now - 60000
+      // 1분 이내 요청만 유지하고 현재 요청 추가
+      const requests = [...s.coachUi.rateLimit.requests.filter(t => t > oneMinuteAgo), now]
+      return { ...s, coachUi: { ...s.coachUi, rateLimit: { ...s.coachUi.rateLimit, requests } } }
+    }
+
+    case 'COACH_RATE_LIMIT_RESET':
+      return { ...s, coachUi: { ...s.coachUi, rateLimit: { ...s.coachUi.rateLimit, requests: [] } } }
+
     // pro ui
     case 'PRO_CODE':
       return { ...s, proUi: { ...s.proUi, unlockCode: e.code } }
@@ -113,7 +124,10 @@ case 'PERSON_ADD': {
 
     // payment
     case 'PAYMENT_START':
-      return { ...s, proUi: { ...s.proUi, payment: loading() } }
+      return { ...s, proUi: { ...s.proUi, payment: loading(), paymentPhase: 'sdk_loading' } }
+
+    case 'PAYMENT_VERIFYING':
+      return { ...s, proUi: { ...s.proUi, paymentPhase: 'verifying' } }
 
     case 'PAYMENT_OK':
       return {
@@ -123,14 +137,14 @@ case 'PERSON_ADD': {
           plan: 'paid',
           entitlement: { token: e.token, expiresAt: e.expiresAt },
         },
-        proUi: { ...s.proUi, payment: success({ token: e.token, expiresAt: e.expiresAt }) },
+        proUi: { ...s.proUi, payment: success({ token: e.token, expiresAt: e.expiresAt }), paymentPhase: 'idle' },
       }
 
     case 'PAYMENT_FAIL':
-      return { ...s, proUi: { ...s.proUi, payment: err(e.error) } }
+      return { ...s, proUi: { ...s.proUi, payment: err(e.error), paymentPhase: 'idle' } }
 
     case 'PAYMENT_RESET':
-      return { ...s, proUi: { ...s.proUi, payment: { status: 'idle' } } }
+      return { ...s, proUi: { ...s.proUi, payment: { status: 'idle' }, paymentPhase: 'idle' } }
 
     default:
       return s

@@ -4,7 +4,7 @@ import type { AppState as DomainState } from '../../shared/storage/state'
 import type { AppEvent } from '../../state/events'
 import { buildReport } from '../../shared/domain/report'
 import { SHARE_CARD_COPY, renderTemplate } from '../../shared/copy/shareCardCopy'
-import { SHARE_CARD_LAYOUTS, type LayoutId } from '../../shared/ui/shareCardLayouts'
+import { SHARE_CARD_LAYOUTS, LAYOUT_CATEGORIES, type LayoutId, type LayoutCategory } from '../../shared/ui/shareCardLayouts'
 import { exportShareCardPng } from '../../shared/utils/exportShareCard'
 import { buildAliasMap, anonymizeName, anonymizeText } from '../../shared/utils/anonymize'
 import { buildShareSafetyReport, formatFinding, SHARE_CHECKLIST } from '../../shared/privacy/shareSafety'
@@ -14,6 +14,7 @@ export function SharePage({ domain, dispatch }: { domain: DomainState, dispatch:
   const [layoutId, setLayoutId] = useState<LayoutId>('L01_CLEAN')
   const [copyId, setCopyId] = useState('c1')
 const [toneFilter, setToneFilter] = useState<'ALL' | '냉정' | '회복' | '유머'>('ALL')
+  const [layoutCategoryFilter, setLayoutCategoryFilter] = useState<'ALL' | LayoutCategory>('ALL')
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [exportMode, setExportMode] = useState<'download' | 'share'>('download')
   const [animKey, setAnimKey] = useState(0)
@@ -27,11 +28,22 @@ const [toneFilter, setToneFilter] = useState<'ALL' | '냉정' | '회복' | '유�
     return SHARE_CARD_COPY.filter(c => c.tone === toneFilter)
   }, [toneFilter])
 
+  const filteredLayoutList = useMemo(() => {
+    if (layoutCategoryFilter === 'ALL') return SHARE_CARD_LAYOUTS
+    return SHARE_CARD_LAYOUTS.filter(l => l.category === layoutCategoryFilter)
+  }, [layoutCategoryFilter])
+
   useEffect(() => {
     if (!filteredCopyList.find(c => c.id === copyId)) {
       setCopyId(filteredCopyList[0]?.id ?? 'c1')
     }
   }, [toneFilter, filteredCopyList, copyId])
+
+  useEffect(() => {
+    if (!filteredLayoutList.find(l => l.id === layoutId)) {
+      setLayoutId(filteredLayoutList[0]?.id ?? 'L01_CLEAN')
+    }
+  }, [layoutCategoryFilter, filteredLayoutList, layoutId])
   const layout = useMemo(() => SHARE_CARD_LAYOUTS.find(l => l.id === layoutId)!, [layoutId])
   const copy = useMemo(() => SHARE_CARD_COPY.find(c => c.id === copyId)!, [copyId])
 
@@ -108,10 +120,10 @@ const [toneFilter, setToneFilter] = useState<'ALL' | '냉정' | '회복' | '유�
   }
 
   const randomizeLayout = (silent = false) => {
-    const list = SHARE_CARD_LAYOUTS
+    const list = filteredLayoutList
     if (!list.length) return
     if (list.length === 1) {
-      setLayoutId(list[0].id as any)
+      setLayoutId(list[0].id)
       if (!silent) bumpAnim()
       return
     }
@@ -120,7 +132,7 @@ const [toneFilter, setToneFilter] = useState<'ALL' | '냉정' | '회복' | '유�
     if (next === layoutId) {
       next = list[(currentIdx + 1) % list.length].id
     }
-    setLayoutId(next as any)
+    setLayoutId(next)
     if (!silent) bumpAnim()
   }
 
@@ -188,8 +200,17 @@ const [toneFilter, setToneFilter] = useState<'ALL' | '냉정' | '회복' | '유�
         <div class="card">
           <div class="h2">설정</div>
 
-          
-          <div class="row" style={{ marginTop: 10, gap: 8 }}>
+          <div class="h3" style={{ marginTop: 10 }}>레이아웃</div>
+          <div class="row" style={{ marginTop: 6, gap: 6, flexWrap: 'wrap' }}>
+            <button class={`tab ${layoutCategoryFilter === 'ALL' ? 'active' : ''}`} onClick={() => setLayoutCategoryFilter('ALL')}>전체</button>
+            {LAYOUT_CATEGORIES.map(c => (
+              <button class={`tab ${layoutCategoryFilter === c.value ? 'active' : ''}`} onClick={() => setLayoutCategoryFilter(c.value)}>{c.label}</button>
+            ))}
+            <span class="badge">레이아웃 {filteredLayoutList.length}/{SHARE_CARD_LAYOUTS.length}</span>
+          </div>
+
+          <div class="h3" style={{ marginTop: 10 }}>카피 톤</div>
+          <div class="row" style={{ marginTop: 6, gap: 6, flexWrap: 'wrap' }}>
             <button class={`tab ${toneFilter === 'ALL' ? 'active' : ''}`} onClick={() => setToneFilter('ALL')}>전체</button>
             <button class={`tab ${toneFilter === '냉정' ? 'active' : ''}`} onClick={() => setToneFilter('냉정')}>냉정</button>
             <button class={`tab ${toneFilter === '회복' ? 'active' : ''}`} onClick={() => setToneFilter('회복')}>회복</button>
@@ -197,11 +218,11 @@ const [toneFilter, setToneFilter] = useState<'ALL' | '냉정' | '회복' | '유�
             <span class="badge">카피 {filteredCopyList.length}/{SHARE_CARD_COPY.length}</span>
           </div>
 
-<div class="row" style={{ marginTop: 10 }}>
+          <div class="row" style={{ marginTop: 10, flexWrap: 'wrap', gap: 8 }}>
             <label class="pill">
               레이아웃
-              <select value={layoutId} onChange={(e) => setLayoutId((e.currentTarget as HTMLSelectElement).value as any)}>
-                {SHARE_CARD_LAYOUTS.map(l => <option value={l.id}>{l.name}</option>)}
+              <select value={layoutId} onChange={(e) => setLayoutId((e.currentTarget as HTMLSelectElement).value as LayoutId)}>
+                {filteredLayoutList.map(l => <option value={l.id}>{l.category} · {l.name}</option>)}
               </select>
             </label>
 
@@ -214,11 +235,13 @@ const [toneFilter, setToneFilter] = useState<'ALL' | '냉정' | '회복' | '유�
                 })}
               </select>
             </label>
-          
-            <button class="btn" onClick={() => randomizeCopy()}>랜덤 카피</button>
+          </div>
+
+          <div class="row" style={{ marginTop: 8, gap: 8 }}>
             <button class="btn" onClick={() => randomizeLayout()}>랜덤 레이아웃</button>
+            <button class="btn" onClick={() => randomizeCopy()}>랜덤 카피</button>
             <button class="btn" onClick={randomizeAll}>랜덤 전체</button>
-</div>
+          </div>
 
           <div class="row" style={{ marginTop: 10 }}>
             <label class="row" style={{ gap: 8 }}>

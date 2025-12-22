@@ -36,9 +36,12 @@ export type LayoutId =
   | 'L34_INVOICE'
   | 'L35_TAX_BILL'
 
+export type LayoutCategory = '기본' | '강렬' | '영수증'
+
 export type LayoutSpec = {
   id: LayoutId
   name: string
+  category: LayoutCategory
   bg: string
   fg: string
   accent: string
@@ -56,10 +59,17 @@ export type LayoutSpec = {
   brutal: boolean
 }
 
+export const LAYOUT_CATEGORIES: { value: LayoutCategory; label: string }[] = [
+  { value: '기본', label: '기본 (깔끔)' },
+  { value: '강렬', label: '강렬 (임팩트)' },
+  { value: '영수증', label: '영수증 (공식)' },
+]
+
 export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L01_CLEAN',
     name: 'Clean Report',
+    category: '기본',
     bg: '#0B0F19',
     fg: '#E8ECF6',
     accent: '#7C3AED',
@@ -79,6 +89,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L02_BRUTAL',
     name: 'Brutal Verdict',
+    category: '강렬',
     bg: '#070707',
     fg: '#F8F8F8',
     accent: '#F97316',
@@ -98,6 +109,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L03_LEDGER',
     name: 'Ledger Sheet',
+    category: '기본',
     bg: '#0A0A0A',
     fg: '#EAEAEA',
     accent: '#22C55E',
@@ -117,6 +129,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L04_STAMP',
     name: 'Stamped Notice',
+    category: '강렬',
     bg: '#0B1220',
     fg: '#F1F5FF',
     accent: '#60A5FA',
@@ -136,6 +149,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L05_TERMINAL',
     name: 'Terminal Log',
+    category: '강렬',
     bg: '#06110B',
     fg: '#E7FFE8',
     accent: '#34D399',
@@ -155,6 +169,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L06_RECEIPT',
     name: 'Receipt',
+    category: '영수증',
     bg: '#0A0A0A',
     fg: '#F5F5F5',
     accent: '#FACC15',
@@ -174,6 +189,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L07_POSTER',
     name: 'Poster',
+    category: '강렬',
     bg: '#0B1020',
     fg: '#FFFFFF',
     accent: '#EC4899',
@@ -193,6 +209,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L08_MINIMAL',
     name: 'Minimal Calm',
+    category: '기본',
     bg: '#0A0F1A',
     fg: '#EEF2FF',
     accent: '#A78BFA',
@@ -212,6 +229,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L09_CARDSTACK',
     name: 'Card Stack',
+    category: '기본',
     bg: '#070A12',
     fg: '#E5E7EB',
     accent: '#38BDF8',
@@ -231,6 +249,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L10_GRID',
     name: 'Grid Report',
+    category: '강렬',
     bg: '#0B0B0B',
     fg: '#FAFAFA',
     accent: '#FB7185',
@@ -250,6 +269,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L11_PULSE',
     name: 'Pulse',
+    category: '기본',
     bg: '#0A0D16',
     fg: '#F3F4F6',
     accent: '#22C55E',
@@ -269,6 +289,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L12_MOTION',
     name: 'Motion Stripe',
+    category: '기본',
     bg: '#080A10',
     fg: '#F8FAFC',
     accent: '#7DD3FC',
@@ -288,6 +309,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L13_NEON',
     name: 'Neon Glow',
+    category: '강렬',
     bg: '#0A0012',
     fg: '#F0F0FF',
     accent: '#E879F9',
@@ -307,6 +329,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L14_SUNSET',
     name: 'Sunset Fade',
+    category: '기본',
     bg: '#110A0A',
     fg: '#FFF5F5',
     accent: '#F97316',
@@ -326,6 +349,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L15_OCEAN',
     name: 'Deep Ocean',
+    category: '기본',
     bg: '#040A14',
     fg: '#E0F2FE',
     accent: '#0EA5E9',
@@ -345,6 +369,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L16_FOREST',
     name: 'Forest Night',
+    category: '기본',
     bg: '#050B08',
     fg: '#ECFDF5',
     accent: '#10B981',
@@ -364,6 +389,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L17_MIDNIGHT',
     name: 'Midnight Blue',
+    category: '기본',
     bg: '#030712',
     fg: '#F1F5F9',
     accent: '#6366F1',
@@ -383,6 +409,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L18_CORAL',
     name: 'Coral Reef',
+    category: '기본',
     bg: '#0C0808',
     fg: '#FFF1F2',
     accent: '#FB7185',
@@ -402,6 +429,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L19_STEEL',
     name: 'Cold Steel',
+    category: '강렬',
     bg: '#08080A',
     fg: '#F4F4F5',
     accent: '#71717A',
@@ -421,6 +449,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L20_EMBER',
     name: 'Ember Dark',
+    category: '강렬',
     bg: '#0C0604',
     fg: '#FEF3C7',
     accent: '#D97706',
@@ -440,6 +469,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L21_FROST',
     name: 'Arctic Frost',
+    category: '기본',
     bg: '#0A0E14',
     fg: '#F0F9FF',
     accent: '#67E8F9',
@@ -459,6 +489,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L22_LAVENDER',
     name: 'Lavender Mist',
+    category: '기본',
     bg: '#0C0A12',
     fg: '#FAF5FF',
     accent: '#C084FC',
@@ -478,6 +509,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L23_NOIR',
     name: 'Film Noir',
+    category: '강렬',
     bg: '#050505',
     fg: '#FAFAFA',
     accent: '#FFFFFF',
@@ -497,6 +529,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L24_MINT',
     name: 'Fresh Mint',
+    category: '기본',
     bg: '#061210',
     fg: '#F0FDF4',
     accent: '#4ADE80',
@@ -516,6 +549,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L25_COPPER',
     name: 'Copper Age',
+    category: '강렬',
     bg: '#0A0806',
     fg: '#FEF2E8',
     accent: '#EA580C',
@@ -535,6 +569,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L26_SLATE',
     name: 'Slate Board',
+    category: '기본',
     bg: '#0F172A',
     fg: '#F8FAFC',
     accent: '#94A3B8',
@@ -554,6 +589,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L27_CHERRY',
     name: 'Cherry Blossom',
+    category: '기본',
     bg: '#0A0608',
     fg: '#FFF5F7',
     accent: '#F472B6',
@@ -573,6 +609,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L28_ARCTIC',
     name: 'Arctic Night',
+    category: '기본',
     bg: '#04080C',
     fg: '#F0FDFA',
     accent: '#2DD4BF',
@@ -592,6 +629,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L29_SAND',
     name: 'Desert Sand',
+    category: '강렬',
     bg: '#0C0A08',
     fg: '#FEFCE8',
     accent: '#EAB308',
@@ -611,6 +649,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L30_VOID',
     name: 'Void Black',
+    category: '강렬',
     bg: '#000000',
     fg: '#E5E5E5',
     accent: '#525252',
@@ -632,6 +671,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L31_RECEIPT_DARK',
     name: '영수증 (다크)',
+    category: '영수증',
     bg: '#0A0A0A',
     fg: '#F5F5F5',
     accent: '#FF6B6B',
@@ -651,6 +691,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L32_RECEIPT_WARM',
     name: '영수증 (따뜻한)',
+    category: '영수증',
     bg: '#0F0D0A',
     fg: '#FFF8E7',
     accent: '#FACC15',
@@ -670,6 +711,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L33_AUDIT_REPORT',
     name: '감사 리포트',
+    category: '영수증',
     bg: '#06090E',
     fg: '#E8ECF6',
     accent: '#3B82F6',
@@ -689,6 +731,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L34_INVOICE',
     name: '청구서',
+    category: '영수증',
     bg: '#050505',
     fg: '#FFFFFF',
     accent: '#EF4444',
@@ -708,6 +751,7 @@ export const SHARE_CARD_LAYOUTS: LayoutSpec[] = [
   {
     id: 'L35_TAX_BILL',
     name: '감정세 고지서',
+    category: '영수증',
     bg: '#0A0C10',
     fg: '#F1F5F9',
     accent: '#F97316',

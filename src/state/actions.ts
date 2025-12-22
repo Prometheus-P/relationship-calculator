@@ -60,10 +60,59 @@ export async function unlockPro(dispatch: Dispatch, code: string) {
   }
 }
 
+/** 에러 메시지를 사용자 친화적으로 일반화 */
+function toUserFriendlyError(e: unknown): string {
+  if (!e) return '잠시 후 다시 시도해주세요'
+
+  // rate limit 에러
+  if (typeof e === 'object' && 'status' in (e as any)) {
+    const status = (e as any).status
+    if (status === 429) return '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.'
+    if (status === 401) return '인증이 필요합니다. PRO 탭에서 토큰을 확인해주세요.'
+    if (status === 403) return '접근이 거부되었습니다. PRO 탭에서 토큰을 확인해주세요.'
+    if (status >= 500) return '서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.'
+  }
+
+  // 네트워크 에러
+  const msg = typeof e === 'string' ? e : (e as any)?.message || ''
+  if (msg.includes('network') || msg.includes('fetch') || msg.includes('Failed to fetch')) {
+    return '네트워크 연결을 확인해주세요'
+  }
+
+  return '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+}
+
+/** Rate limit 체크 (1분당 5회) */
+function checkRateLimit(rateLimit: { requests: number[]; limitPerMinute: number }): { allowed: boolean; remaining: number; resetInSeconds: number } {
+  const now = Date.now()
+  const oneMinuteAgo = now - 60000
+  const recentRequests = rateLimit.requests.filter(t => t > oneMinuteAgo)
+  const remaining = Math.max(0, rateLimit.limitPerMinute - recentRequests.length)
+  const allowed = recentRequests.length < rateLimit.limitPerMinute
+
+  // 가장 오래된 요청이 만료될 때까지 남은 시간
+  const oldestRequest = recentRequests.length > 0 ? Math.min(...recentRequests) : now
+  const resetInSeconds = Math.max(0, Math.ceil((oldestRequest + 60000 - now) / 1000))
+
+  return { allowed, remaining, resetInSeconds }
+}
+
 /** Coach run: free_rules -> paid_api (if enabled) with safe fallback */
 export async function runCoach(dispatch: Dispatch, getState: GetState) {
   const s0 = getState()
   const { tone, situation, context } = s0.coachUi.draft
+
+  // Rate limit 체크 (PRO만 적용)
+  if (s0.domain.plan === 'paid') {
+    const limitCheck = checkRateLimit(s0.coachUi.rateLimit)
+    if (!limitCheck.allowed) {
+      dispatch({
+        type: 'COACH_RUN_FAIL',
+        error: `요청 한도에 도달했습니다. ${limitCheck.resetInSeconds}초 후에 다시 시도해주세요.`
+      })
+      return
+    }
+  }
 
   dispatch({ type: 'COACH_RUN_START' })
 
@@ -74,9 +123,12 @@ export async function runCoach(dispatch: Dispatch, getState: GetState) {
     const token = s0.domain.entitlement?.token || ''
     if (!token) {
       dispatch({ type: 'COACH_NEED_PRO', need: true })
-      dispatch({ type: 'COACH_RUN_FAIL', error: 'PRO 토큰이 없습니다. (PRO 탭에서 언락)' })
+      dispatch({ type: 'COACH_RUN_FAIL', error: 'PRO 토큰이 없습니다. PRO 탭에서 언락해주세요.' })
       return
     }
+
+    // Rate limit 카운트 추가
+    dispatch({ type: 'COACH_RATE_LIMIT_ADD' })
 
     try {
       const payload = toCoachPayload({ report, situation: maskPii(situation), tone, context })
@@ -84,10 +136,18 @@ export async function runCoach(dispatch: Dispatch, getState: GetState) {
       dispatch({ type: 'COACH_RUN_OK', data: result })
       return
     } catch (e) {
-      // fallback to free
-      const fb = fakeCoach({ report, situation, tone, context })
-      fb.disclaimer = `${fb.disclaimer}\n(유료 호출 실패 → 무료 규칙 코치로 폴백)`
-      dispatch({ type: 'COACH_RUN_OK', data: fb })
+      // 에러 메시지 일반화
+      const userError = toUserFriendlyError(e)
+
+      // fallback to free (서버 에러 시에만)
+      if (typeof e === 'object' && 'status' in (e as any) && (e as any).status >= 500) {
+        const fb = fakeCoach({ report, situation, tone, context })
+        fb.disclaimer = `${fb.disclaimer}\n(서버 일시 장애로 무료 규칙 코치로 대체되었습니다)`
+        dispatch({ type: 'COACH_RUN_OK', data: fb })
+        return
+      }
+
+      dispatch({ type: 'COACH_RUN_FAIL', error: userError })
       return
     }
   }
@@ -97,7 +157,7 @@ export async function runCoach(dispatch: Dispatch, getState: GetState) {
     const result = fakeCoach({ report, situation, tone, context })
     dispatch({ type: 'COACH_RUN_OK', data: result })
   } catch (e) {
-    dispatch({ type: 'COACH_RUN_FAIL', error: toErrorMessage(e) })
+    dispatch({ type: 'COACH_RUN_FAIL', error: toUserFriendlyError(e) })
   }
 }
 
@@ -105,7 +165,12 @@ export async function runCoach(dispatch: Dispatch, getState: GetState) {
 export async function purchasePro(dispatch: Dispatch, productId: ProductId) {
   dispatch({ type: 'PAYMENT_START' })
   try {
-    const result = await requestPayment(productId)
+    const result = await requestPayment(productId, (phase) => {
+      if (phase === 'verifying') {
+        dispatch({ type: 'PAYMENT_VERIFYING' })
+      }
+      // sdk_loading, payment_pending은 PAYMENT_START에서 이미 처리됨
+    })
     if (result.success === true) {
       dispatch({ type: 'PAYMENT_OK', token: result.token, expiresAt: result.expiresAt })
     } else if (result.success === false) {

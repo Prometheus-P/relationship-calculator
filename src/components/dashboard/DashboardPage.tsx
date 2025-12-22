@@ -244,9 +244,29 @@ export function DashboardPage({ domain, dispatch }: { domain: DomainState, dispa
             </div>
 
             <div class="row">
-              <input class="input small" type="number" min={0} value={entryMinutes} onInput={(e) => setEntryMinutes(Number((e.currentTarget as HTMLInputElement).value))} />
+              <input
+                class="input small"
+                type="number"
+                min={0}
+                max={1440}
+                value={entryMinutes}
+                onInput={(e) => {
+                  const val = Number((e.currentTarget as HTMLInputElement).value)
+                  setEntryMinutes(Math.max(0, Math.min(1440, val || 0)))
+                }}
+              />
               <div class="hint">분(시간 비용으로 환산)</div>
-              <input class="input small" type="number" min={0} value={entryMoney} onInput={(e) => setEntryMoney(Number((e.currentTarget as HTMLInputElement).value))} />
+              <input
+                class="input small"
+                type="number"
+                min={0}
+                max={100000000}
+                value={entryMoney}
+                onInput={(e) => {
+                  const val = Number((e.currentTarget as HTMLInputElement).value)
+                  setEntryMoney(Math.max(0, Math.min(100000000, val || 0)))
+                }}
+              />
               <div class="hint">원(직접 지출)</div>
             </div>
 
