@@ -328,6 +328,43 @@ export const SHARE_CARD_COPY: ShareCardCopy[] = [
     sub: '{{topPersonLabel}} 비중 ↓ / 나 비중 ↑. 손실 -₩{{netLossWon}} 회수 목표.',
     footer: '분산 투자가 답이다.',
   },
+
+  // --- Sprint 3: Additional balance (50개 완성) ---
+  {
+    id: 'c46',
+    tone: '회복',
+    headline: '내 시간은 환불 불가',
+    sub: '{{topCauseLabel}}에 쓴 -{{hoursLost}}h. 환불은 못 받지만, 앞으로는 안 준다.',
+    footer: '시간은 다시 오지 않는다. 그래서 더 아껴야 한다.',
+  },
+  {
+    id: 'c47',
+    tone: '회복',
+    headline: '{{windowLabel}}: 나를 위한 결정',
+    sub: '손실 -₩{{netLossWon}}. 원인 {{topCauseLabel}}. 이제 나를 위한 선택만 한다.',
+    footer: '후회 없는 선택은 나를 선택하는 것.',
+  },
+  {
+    id: 'c48',
+    tone: '냉정',
+    headline: '감정 파산 신청서',
+    sub: '채권자: {{topPersonLabel}}. 채무: -₩{{netLossWon}}. 상환 불가. 파산 선언.',
+    footer: '파산하면 다시 시작할 수 있다.',
+  },
+  {
+    id: 'c49',
+    tone: '유머',
+    headline: '{{windowLabel}} 관계 건강검진 결과',
+    sub: '진단: {{topCauseLabel}} 과다 노출. 처방: 거리두기. 예상 회복 기간: 즉시.',
+    footer: '건강이 최고다.',
+  },
+  {
+    id: 'c50',
+    tone: '냉정',
+    headline: '관계 비용 감사 완료',
+    sub: '{{topPersonLabel}} 항목에서 -₩{{netLossWon}} 비정상 지출 발견. 원인: {{topCauseLabel}}.',
+    footer: '감사 결과: 구조조정 필요.',
+  },
 ]
 
 export function renderTemplate(tpl: string, vars: Record<string, any>): string {

@@ -18,6 +18,19 @@ function formatExpiry(expiresAt: string | undefined): string {
   }
 }
 
+function getPaymentPhaseText(phase: string): { title: string; hint: string } {
+  switch (phase) {
+    case 'sdk_loading':
+      return { title: '결제 준비 중...', hint: '결제 모듈을 불러오고 있습니다.' }
+    case 'payment_pending':
+      return { title: '결제창 열림', hint: '결제창에서 결제를 완료해주세요.' }
+    case 'verifying':
+      return { title: '결제 확인 중...', hint: '결제 정보를 검증하고 있습니다.' }
+    default:
+      return { title: '결제 진행 중...', hint: '잠시만 기다려주세요.' }
+  }
+}
+
 export function ProPage({ state, dispatch, actions }: { state: AppState; dispatch: (e: AppEvent) => void; actions: Actions }) {
   const token = state.domain.entitlement?.token || ''
   const expiresAt = state.domain.entitlement?.expiresAt
@@ -25,6 +38,7 @@ export function ProPage({ state, dispatch, actions }: { state: AppState; dispatc
 
   const unlock = state.proUi.unlock
   const payment = state.proUi.payment
+  const paymentPhase = state.proUi.paymentPhase
   const code = state.proUi.unlockCode
 
   const isLoading = unlock.status === 'loading' || payment.status === 'loading'
@@ -94,30 +108,53 @@ export function ProPage({ state, dispatch, actions }: { state: AppState; dispatc
           </div>
 
           {payment.status === 'loading' && (
-            <div class="callout" style={{ marginTop: 12 }}>
-              <div style={{ fontWeight: 700 }}>결제 진행 중...</div>
-              <div class="hint">결제창이 열립니다. 완료할 때까지 기다려주세요.</div>
+            <div class="callout" style={{ marginTop: 12, borderColor: 'var(--colorBrandStroke1)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{
+                  display: 'inline-block',
+                  width: 16,
+                  height: 16,
+                  border: '2px solid var(--colorBrandForeground1)',
+                  borderTopColor: 'transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                }} />
+                <span style={{ fontWeight: 700 }}>{getPaymentPhaseText(paymentPhase).title}</span>
+              </div>
+              <div class="hint" style={{ marginTop: 4 }}>{getPaymentPhaseText(paymentPhase).hint}</div>
+              {paymentPhase === 'verifying' && (
+                <div class="hint" style={{ marginTop: 8, fontSize: 'var(--fontSizeBase100)' }}>
+                  결제 검증에 시간이 걸릴 수 있습니다. 창을 닫지 마세요.
+                </div>
+              )}
             </div>
           )}
 
           {payment.status === 'error' && (
             <div class="callout danger" style={{ marginTop: 12 }}>
-              <div style={{ fontWeight: 900 }}>결제 실패</div>
-              <div class="hint">{payment.error}</div>
-              <button
-                class="btn ghost"
-                style={{ marginTop: 8 }}
-                onClick={() => dispatch({ type: 'PAYMENT_RESET' })}
-              >
-                다시 시도
-              </button>
+              <div style={{ fontWeight: 900, marginBottom: 4 }}>결제 실패</div>
+              <div style={{ marginBottom: 12 }}>{payment.error}</div>
+              <div class="row" style={{ gap: 8 }}>
+                <button
+                  class="btn primary"
+                  onClick={() => dispatch({ type: 'PAYMENT_RESET' })}
+                >
+                  다시 시도
+                </button>
+              </div>
+              <div class="hint" style={{ marginTop: 12 }}>
+                문제가 계속되면 support@example.com 으로 문의해주세요.
+              </div>
             </div>
           )}
 
           {payment.status === 'success' && (
-            <div class="callout" style={{ marginTop: 12, background: 'var(--colorStatusSuccessBackground1)' }}>
-              <div style={{ fontWeight: 900 }}>결제 완료</div>
-              <div class="hint">PRO가 활성화되었습니다. 코치 탭에서 AI 판사를 이용해보세요.</div>
+            <div class="callout" style={{ marginTop: 12, background: 'var(--colorStatusSuccessBackground1)', borderColor: 'var(--colorStatusSuccessForeground1)' }}>
+              <div style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: 'var(--colorStatusSuccessForeground1)' }}>✓</span>
+                결제 완료
+              </div>
+              <div class="hint" style={{ marginTop: 4 }}>PRO가 활성화되었습니다. 코치 탭에서 AI 판사를 이용해보세요.</div>
             </div>
           )}
         </>

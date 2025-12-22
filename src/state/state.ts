@@ -28,6 +28,7 @@ export function initialState(): AppState {
       draft: { tone: '냉정', situation: '', context: 'personal' },
       run: idle(),
       needPro: false,
+      rateLimit: { requests: [], limitPerMinute: 5 },
     },
     shareUi: {
       layoutId: 'L01_CLEAN',
@@ -42,6 +43,7 @@ export function initialState(): AppState {
       unlockCode: '',
       unlock: idle(),
       payment: idle(),
+      paymentPhase: 'idle',
     },
   }
 }

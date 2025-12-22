@@ -26,10 +26,16 @@ export type DashboardUi =
   | { kind: 'HAS_PEOPLE'; selectedPersonId: string; entryFormOpen: boolean; draft?: EntryDraft; error?: string }
 
 /** Coach UI */
+export type CoachRateLimit = {
+  requests: number[]  // 요청 타임스탬프 배열
+  limitPerMinute: number
+}
+
 export type CoachUi = {
   draft: { tone: CoachTone; situation: string; context: CoachContext }
   run: AsyncState<CoachResult>
   needPro: boolean
+  rateLimit: CoachRateLimit
 }
 
 /** Share UI (레이아웃/카피/PII 스캔 중앙화) */
@@ -45,8 +51,11 @@ export type ShareUi = {
 }
 
 /** Pro UI */
+export type PaymentPhase = 'idle' | 'sdk_loading' | 'payment_pending' | 'verifying'
+
 export type ProUi = {
   unlockCode: string
   unlock: AsyncState<{ token: string }>
   payment: AsyncState<{ token: string; expiresAt: string }>
+  paymentPhase: PaymentPhase
 }

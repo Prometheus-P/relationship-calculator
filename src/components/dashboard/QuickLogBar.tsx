@@ -136,8 +136,12 @@ export function QuickLogBar({ domain, dispatch, personId, setPersonId, onSaved, 
                   class="input qInput"
                   type="number"
                   min={0}
+                  max={1440}
                   value={minutes}
-                  onInput={(e) => setMinutes(Number((e.currentTarget as HTMLInputElement).value))}
+                  onInput={(e) => {
+                    const val = Number((e.currentTarget as HTMLInputElement).value)
+                    setMinutes(Math.max(0, Math.min(1440, val || 0)))
+                  }}
                 />
               </div>
               <div class="hint danger" style={{ marginTop: 4 }}>
@@ -155,8 +159,12 @@ export function QuickLogBar({ domain, dispatch, personId, setPersonId, onSaved, 
                   class="input qInput"
                   type="number"
                   min={0}
+                  max={100000000}
                   value={moneyWon}
-                  onInput={(e) => setMoneyWon(Number((e.currentTarget as HTMLInputElement).value))}
+                  onInput={(e) => {
+                    const val = Number((e.currentTarget as HTMLInputElement).value)
+                    setMoneyWon(Math.max(0, Math.min(100000000, val || 0)))
+                  }}
                 />
               </div>
             </div>

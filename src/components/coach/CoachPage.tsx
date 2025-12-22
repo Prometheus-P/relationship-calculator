@@ -15,6 +15,8 @@ const CONTEXTS: { value: CoachContext; label: string }[] = [
   { value: 'client', label: '클라이언트 (B2B)' },
 ]
 
+const MAX_SITUATION_LENGTH = 500
+
 const GRADE_COLORS: Record<CoachResult['grade'], string> = {
   GUILTY: 'var(--colorStatusDangerForeground1)',
   WARNING: 'var(--colorStatusWarningForeground1)',
@@ -36,7 +38,21 @@ export function CoachPage({ state, dispatch, actions }: { state: AppState; dispa
   const token = state.domain.entitlement?.token || ''
   const paidReady = paid && !!token
 
-  const { draft, run, needPro } = state.coachUi
+  const { draft, run, needPro, rateLimit } = state.coachUi
+
+  // Rate limit 계산
+  const rateLimitInfo = useMemo(() => {
+    const now = Date.now()
+    const oneMinuteAgo = now - 60000
+    const recentRequests = rateLimit.requests.filter(t => t > oneMinuteAgo)
+    const remaining = Math.max(0, rateLimit.limitPerMinute - recentRequests.length)
+    const isLimited = recentRequests.length >= rateLimit.limitPerMinute
+    return { remaining, total: rateLimit.limitPerMinute, isLimited }
+  }, [rateLimit.requests, rateLimit.limitPerMinute])
+
+  // 입력 길이 체크
+  const situationLength = draft.situation.length
+  const isOverLimit = situationLength > MAX_SITUATION_LENGTH
 
   const runLabel =
     run.status === 'loading'
@@ -44,6 +60,8 @@ export function CoachPage({ state, dispatch, actions }: { state: AppState; dispa
       : paid
         ? 'PRO 판결 요청'
         : '무료 판결 요청'
+
+  const canRun = !isOverLimit && draft.situation.trim().length > 0 && run.status !== 'loading'
 
   return (
     <div class="panel">
@@ -103,12 +121,48 @@ export function CoachPage({ state, dispatch, actions }: { state: AppState; dispa
         class="textarea"
         placeholder="예: 매번 일방적으로 부탁만 하는데, 거절하면 기분 상할까봐 못 끊겠음"
         value={draft.situation}
-        onInput={(e) => dispatch({ type: 'COACH_DRAFT', patch: { situation: (e.currentTarget as HTMLTextAreaElement).value } })}
+        maxLength={MAX_SITUATION_LENGTH + 50}
+        onInput={(e) => {
+          const value = (e.currentTarget as HTMLTextAreaElement).value
+          if (value.length <= MAX_SITUATION_LENGTH + 50) {
+            dispatch({ type: 'COACH_DRAFT', patch: { situation: value } })
+          }
+        }}
         rows={4}
+        style={{ borderColor: isOverLimit ? 'var(--colorStatusDangerForeground1)' : undefined }}
       />
+      <div class="row" style={{ justifyContent: 'space-between', marginTop: 4 }}>
+        <div class="hint">
+          {isOverLimit && <span style={{ color: 'var(--colorStatusDangerForeground1)' }}>최대 {MAX_SITUATION_LENGTH}자까지 입력 가능</span>}
+        </div>
+        <div class="hint" style={{ color: isOverLimit ? 'var(--colorStatusDangerForeground1)' : undefined }}>
+          {situationLength} / {MAX_SITUATION_LENGTH}
+        </div>
+      </div>
+
+      {/* Rate limit 표시 (PRO만) */}
+      {paid && (
+        <div class="row" style={{ marginTop: 8, gap: 8 }}>
+          <div class="hint" style={{
+            padding: '4px 8px',
+            background: rateLimitInfo.isLimited ? 'var(--colorStatusDangerBackground1)' : 'var(--colorNeutralBackground2)',
+            borderRadius: 'var(--borderRadiusMedium)',
+            border: `1px solid ${rateLimitInfo.isLimited ? 'var(--colorStatusDangerForeground1)' : 'var(--colorNeutralStroke1)'}`,
+          }}>
+            남은 요청: <b style={{ color: rateLimitInfo.isLimited ? 'var(--colorStatusDangerForeground1)' : 'var(--colorBrandForeground1)' }}>
+              {rateLimitInfo.remaining}/{rateLimitInfo.total}
+            </b> (1분당)
+          </div>
+          {rateLimitInfo.isLimited && (
+            <div class="hint" style={{ color: 'var(--colorStatusDangerForeground1)' }}>
+              잠시 후 다시 시도해주세요
+            </div>
+          )}
+        </div>
+      )}
 
       <div class="row" style={{ marginTop: 12 }}>
-        <button class="btn primary" disabled={run.status === 'loading' || !draft.situation.trim()} onClick={() => actions.runCoach()}>
+        <button class="btn primary" disabled={!canRun || (paid && rateLimitInfo.isLimited)} onClick={() => actions.runCoach()}>
           {runLabel}
         </button>
         <button class="btn subtle" disabled={run.status === 'loading'} onClick={() => dispatch({ type: 'COACH_DRAFT', patch: { situation: '' } })}>

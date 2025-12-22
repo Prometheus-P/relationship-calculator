@@ -67,10 +67,15 @@ async function loadPortOneSDK(): Promise<any> {
   })
 }
 
+export type PaymentPhaseCallback = (phase: 'sdk_loading' | 'payment_pending' | 'verifying') => void
+
 /**
  * 결제 요청
  */
-export async function requestPayment(productId: ProductId): Promise<PaymentResult> {
+export async function requestPayment(
+  productId: ProductId,
+  onPhase?: PaymentPhaseCallback
+): Promise<PaymentResult> {
   const product = PRODUCTS[productId]
   if (!product) {
     return { success: false, error: '알 수 없는 상품입니다' }
@@ -82,14 +87,17 @@ export async function requestPayment(productId: ProductId): Promise<PaymentResul
 
   if (!storeId || !channelKey) {
     console.error('[portone] Missing VITE_PORTONE_STORE_ID or VITE_PORTONE_CHANNEL_KEY')
-    return { success: false, error: '결제 시스템 설정이 필요합니다' }
+    return { success: false, error: '결제 시스템 설정이 필요합니다. 관리자에게 문의하세요.' }
   }
 
   try {
+    onPhase?.('sdk_loading')
     const PortOne = await loadPortOneSDK()
 
     // 고유 주문번호 생성
     const orderId = `order_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+    onPhase?.('payment_pending')
 
     // PortOne V2 결제 요청
     const response = await PortOne.requestPayment({
@@ -114,13 +122,21 @@ export async function requestPayment(productId: ProductId): Promise<PaymentResul
     // 결제 실패/취소
     if (response.code) {
       console.error('[portone] Payment failed:', response)
-      return {
-        success: false,
-        error: response.message || '결제가 취소되었습니다',
+      // 사용자 친화적 에러 메시지
+      let errorMsg = '결제가 취소되었습니다'
+      if (response.code === 'USER_CANCEL') {
+        errorMsg = '결제를 취소했습니다'
+      } else if (response.code === 'FAILURE') {
+        errorMsg = response.message || '결제에 실패했습니다. 카드 정보를 확인해주세요.'
+      } else if (response.message) {
+        errorMsg = response.message
       }
+      return { success: false, error: errorMsg }
     }
 
     // 결제 성공 → 서버 검증
+    onPhase?.('verifying')
+
     const verifyRes = await fetch('/api/billing/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -131,7 +147,7 @@ export async function requestPayment(productId: ProductId): Promise<PaymentResul
       const data = await verifyRes.json().catch(() => ({}))
       return {
         success: false,
-        error: data?.error || '결제 검증 실패',
+        error: data?.error || '결제는 완료되었으나 검증에 실패했습니다. 고객센터에 문의해주세요.',
       }
     }
 
@@ -146,10 +162,12 @@ export async function requestPayment(productId: ProductId): Promise<PaymentResul
 
   } catch (e: any) {
     console.error('[portone] Error:', e)
-    return {
-      success: false,
-      error: e?.message || '결제 처리 중 오류 발생',
+    // 네트워크 에러 등 사용자 친화적 메시지
+    const msg = e?.message || ''
+    if (msg.includes('network') || msg.includes('fetch')) {
+      return { success: false, error: '네트워크 연결을 확인해주세요' }
     }
+    return { success: false, error: '결제 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }
   }
 }
 
