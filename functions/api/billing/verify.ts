@@ -3,6 +3,9 @@
  * PortOne V2 결제 검증 및 PRO 토큰 발급
  */
 
+import { json, badRequest, serverError } from '../../utils/response'
+import { issueSignedToken } from '../../utils/token'
+
 export interface Env {
   /** PortOne V2 API Secret */
   PORTONE_API_SECRET: string
@@ -18,55 +21,6 @@ export interface Env {
 const PRICE_TABLE: Record<string, number> = {
   'pro_monthly': 9900,
   'pro_yearly': 99000,
-}
-
-function json(data: any, init: ResponseInit = {}) {
-  return new Response(JSON.stringify(data), {
-    ...init,
-    headers: { 'Content-Type': 'application/json; charset=utf-8', ...(init.headers || {}) },
-  })
-}
-
-function badRequest(message: string) {
-  return json({ error: message }, { status: 400 })
-}
-
-function unauthorized(message: string) {
-  return json({ error: message }, { status: 401 })
-}
-
-/**
- * HMAC-SHA256 서명 생성
- * @returns base64url 인코딩된 서명 (12자)
- */
-async function signPayload(payload: string, secret: string): Promise<string> {
-  const enc = new TextEncoder()
-  const key = await crypto.subtle.importKey(
-    'raw',
-    enc.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  )
-  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(payload))
-  return btoa(String.fromCharCode(...new Uint8Array(sig)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '')
-    .slice(0, 12)
-}
-
-/**
- * HMAC 서명된 토큰 생성
- * 형식: {prefix}_{timestamp_base36}_{uuid}_{expiry_base36}_{hmac12}
- */
-async function issueSignedToken(prefix: string, expiryDays: number, secret: string): Promise<string> {
-  const rand = crypto.randomUUID().replace(/-/g, '').slice(0, 16)
-  const ts = Date.now().toString(36)
-  const expiry = (Date.now() + expiryDays * 86400000).toString(36)
-  const payload = `${prefix}_${ts}_${rand}_${expiry}`
-  const sig = await signPayload(payload, secret)
-  return `${payload}_${sig}`
 }
 
 /**
@@ -92,7 +46,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   // 환경변수 검증
   if (!ctx.env.PORTONE_API_SECRET) {
     console.error('[verify] PORTONE_API_SECRET not configured')
-    return json({ error: '결제 시스템 설정 오류' }, { status: 500 })
+    return serverError('결제 시스템 설정 오류')
   }
 
   let body: any
@@ -173,6 +127,6 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   } catch (e: any) {
     console.error('[verify] Error:', e)
-    return json({ error: '결제 검증 중 오류가 발생했습니다' }, { status: 500 })
+    return serverError('결제 검증 중 오류가 발생했습니다')
   }
 }
